@@ -16,8 +16,7 @@
         }
     ],
     "require": {
-        "felideo/debug2":                    "v1.*",
-        "elipettingale/microtime-converter": "v1.*"
+        "felideo/debug2":                    "v1.*"
     },
     "autoload": {
         "psr-4": {
