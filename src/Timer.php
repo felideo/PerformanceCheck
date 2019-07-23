@@ -3,12 +3,11 @@
 namespace Felideo\Performance;
 
 class Timer {
-	private $start_time   = 0;
-	private $end_time     = 0;
-	private $memory_start = 0;
-	private $laps         = [];
-	private $lapCount     = 0;
-	private	$timeZone     = 'America/Sao_Paulo';
+	private $start_time            = 0;
+	private $end_time              = 0;
+	private $laps                  = [];
+	private $lap_count             = 0;
+	private	$time_zone             = 'America/Sao_Paulo';
 	private	$defaultBacktraceIndex = [
 		'class'    => 1,
 		'line'     => 0,
@@ -16,39 +15,50 @@ class Timer {
 		'file'     => 0,
 	];
 
-	private function __construct() {
+	private function __construct(){
 		$this->reset();
 	}
 
 	public static function get_timer(){
-		if(isset($_SESSION['performance_test']) && is_object($_SESSION['performance_test']) && $_SESSION['performance_test'] instanceof felideo\Timer){
-			return $_SESSION['performance_test'];
+		if(isset($_SESSION['performance_check']) && is_object($_SESSION['performance_check']) && $_SESSION['performance_check'] instanceof felideo\Timer){
+			return $_SESSION['performance_check'];
 		}
 
-		$_SESSION['performance_test'] = new Felideo\Performance\Timer();
+		$_SESSION['performance_check'] = new Timer();
 
-		return $_SESSION['performance_test'];
-	}
-
-	public function setTimeZone(String $timeZone) {
-		$this->timeZone = $timeZone;
-		return $this;
+		return $_SESSION['performance_check'];
 	}
 
 	public function reset(){
-		$this->startTime = 0;
-		$this->endTime   = 0;
-		$this->pauseTime = 0;
-		$this->laps      = [];
-		$this->lapCount  = 0;
+		$this->start_time   = 0;
+		$this->end_time     = 0;
+		$this->laps         = [];
+		$this->lap_count    = 0;
+		return $this;
+	}
+
+	public function setTimeZone($time_zone){
+		$this->time_zone = $time_zone;
+		return $this;
+	}
+
+	public function defaultBacktraceIndex($class, $line, $function, $file){
+		$this->defaultBacktraceIndex = [
+			'class'    => $class,
+			'line'     => $line,
+			'function' => $function,
+			'file'     => $file,
+		];
+
+		return $this;
 	}
 
 	public function start($name = "start"){
-		$this->startTime = $this->getCurrentTime();
+		$this->start_time = $this->getCurrentTime();
 		$this->lap($name, debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS));
 	}
 
-	public function lap($name = null){
+	public function lap($name = null, $backtrace = null){
 		$this->endLap();
 
 		if(empty($backtrace)){
@@ -58,8 +68,9 @@ class Timer {
 		$backtrace = $this->preparaBacktrace($backtrace);
 
 		$this->laps[] = [
-			"name"      => ($name ? $name : $this->lapCount),
+			"name"      => ($name ? $name : $this->lap_count),
 			"start"     => $this->getCurrentTime(),
+			"memory"    => memory_get_peak_usage(true) / 1048576 . ' Mb',
 			"called_on" => [
 				"Class/Function/Line" => "CLASS => " . $backtrace['class'] . " - FUNCTION => " . $backtrace['function'] . " - LINE => " . $backtrace['line'],
 				"File"                => $backtrace['file'],
@@ -68,15 +79,7 @@ class Timer {
 			"total"     => -1,
 		];
 
-		$this->lapCount += 1;
-	}
-
-	public function endLap(){
-		$lapCount = count($this->laps) - 1;
-		if(count($this->laps) > 0){
-			$this->laps[$lapCount]['end']   = $this->getCurrentTime();
-			$this->laps[$lapCount]['total'] = $this->laps[$lapCount]['end'] - $this->laps[$lapCount]['start'];
-		}
+		$this->lap_count += 1;
 	}
 
 	private function preparaBacktrace($backtrace) {
@@ -88,35 +91,62 @@ class Timer {
 		];
 	}
 
+	public function endLap(){
+		$lapCount = count($this->laps) - 1;
+		if(count($this->laps) > 0){
+			$this->laps[$lapCount]['end']   = $this->getCurrentTime();
+			$this->laps[$lapCount]['total'] = $this->formatTime($this->laps[$lapCount]['end'] - $this->laps[$lapCount]['start']);
+		}
+	}
+
 	public function stop() {
-		$this->endTime = $this->getCurrentTime();
+		$this->end_time = $this->getCurrentTime();
+		$this->lap($name, debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS));
 		$this->endLap();
 	}
 
-	public function summary() {
+	public function summary($print = false) {
 		$this->removeStartsEnds();
 
-		$backtrace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
-		$backtrace = $this->preparaBacktrace($backtrace);
-
 		$return = [
-			'running'   => $this->state,
-			'start'     => $this->formatDate($this->startTime),
-			'end'       => $this->formatDate($this->endTime),
-			'total'     => $this->formatTime($this->endTime - $this->startTime),
-			'paused'    => $this->formatTime($this->totalPauseTime),
-			"called_on" => [
-				"Class/Function/Line" => "CLASS => " . $backtrace['class'] . " - FUNCTION => " . $backtrace['function'] . " - LINE => " . $backtrace['line'],
-				"File"                => $backtrace['file'],
-			],
-			'laps'      => $this->laps,
+			'start'     => $this->formatDate($this->start_time),
+			'end'       => $this->formatDate($this->end_time),
+			"memory"    => memory_get_peak_usage(true) / 1048576 . ' Mb',
+			'total'     => $this->formatTime($this->end_time - $this->start_time),
+			'laps'      => $this->laps
 		];
 
-		if (!empty($this->removeCalledOnInfo)) {
-			unset($return['called_on']);
+		if(!empty($print)){
+			debug2($return);
 		}
 
 		return $return;
+	}
+
+	public function formatDate() {
+		$DateTime = \DateTime::createFromFormat('U.u', $this->start_time);
+		$DateTime->setTimezone(new \DateTimeZone($this->time_zone));
+
+		return $DateTime->format("Y-m-d H:i:s.u");
+	}
+
+
+	public function formatTime($microtime) {
+		if (empty($microtime)) {
+			return 0;
+		}
+
+		$total = new MicroTime($microtime);
+
+		// if(empty($total->hours) && empty($total->minutes) && empty($total->seconds) && empty($total->milliseconds)){
+		// 	return $microtime . ' microseconds';
+		// }
+
+		$hours   = strlen($total->hours) 	== 1 ? '0' . $total->hours : $total->hours;
+		$minutes = strlen($total->minutes)	== 1 ? '0' . $total->minutes : $total->minutes;
+		$seconds = strlen($total->seconds)	== 1 ? '0' . $total->seconds : $total->seconds;
+
+		return $hours . ':' . $minutes . ':' . $seconds . '.' . $total->milliseconds;
 	}
 
 	public function removeStartsEnds() {
@@ -127,7 +157,7 @@ class Timer {
 	}
 
 	public function getCurrentTime() {
-		return microtime( true );
+		return microtime(true);
 	}
 }
 

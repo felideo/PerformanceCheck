@@ -1,15 +1,18 @@
 <?php
 
 function performance_start(){
-	Felideo\Performance\Timer::get_timer();
-	debug2('exit');
-	exit;
+	$performance = \Felideo\Performance\Timer::get_timer();
+	$performance->setTimeZone('America/Sao_Paulo')
+		->defaultBacktraceIndex(2, 1, 2, 1)
+		->reset()
+		->start();
 }
 
-function performance_lap(){
-
+function performance_lap($name = null){
+	$_SESSION['performance_check']->lap($name);
 }
 
-function performance_stop(){
-
+function performance_stop($name = null){
+	$_SESSION['performance_check']->stop();
+	$_SESSION['performance_check']->summary(true);
 }
