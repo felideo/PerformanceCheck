@@ -1,181 +1,134 @@
 <?php
-/**
- * PHPBenchTime
- * A light benchmark timer class for PHP
- *
- * @author   Juan L. Sanchez <juan.sanchez@juanleonardosanchez.com>
- * @license  MIT
- * @version  2.0.0
- * @internal 07.23.2014
- */
 
-namespace PHPBenchTime;
+namespace Felideo;
 
 class Timer {
-    /**
-     * Handle the running state of the timer
-     */
-    const RUNNING = 1;
-    const PAUSED = 0;
-    const STOPPED = -1;
-    public $state;
+	private $start_time   = 0;
+	private $end_time     = 0;
+	private $memory_start = 0;
+	private $laps         = [];
+	private $lapCount     = 0;
+	private	$timeZone     = 'America/Sao_Paulo';
+	private	$defaultBacktraceIndex = [
+		'class'    => 1,
+		'line'     => 0,
+		'function' => 1,
+		'file'     => 0,
+	];
 
-    /**
-     * Time that $this->start() was called
-     *
-     * @var int
-     */
-    public $startTime = 0;
+	private function __construct() {
+		$this->reset();
+	}
 
-    /**
-     * Time that $this->end() was called
-     *
-     * @var int
-     */
-    public $endTime = 0;
+	public static get_timer(){
+		if(isset($_SESSION['performance_test']) && is_object($_SESSION['performance_test']) && $_SESSION['performance_test'] instanceof felideo\Timer){
+			return $_SESSION['performance_test'];
+		}
 
-    /**
-     * Total time spent in pause
-     *
-     * @var int
-     */
-    public $totalPauseTime = 0;
+		$_SESSION['performance_test'] = new felideo\Timer();
 
-    /**
-     * Time spent in pause
-     *
-     * @var int
-     */
-    public $pauseTime = 0;
+		return $_SESSION['performance_test'];
+	}
 
-    /**
-     * Contains all laps
-     *
-     * @var array
-     */
-    public $laps = array();
+	public function setTimeZone(String $timeZone) {
+		$this->timeZone = $timeZone;
+		return $this;
+	}
 
-    /**
-     * Keeps track of what lap we are currently on
-     *
-     * @var int
-     */
-    public $lapCount = 0;
+	public function reset(){
+		$this->startTime = 0;
+		$this->endTime   = 0;
+		$this->pauseTime = 0;
+		$this->laps      = [];
+		$this->lapCount  = 0;
+	}
 
-    /**
-     * Class constructor
-     */
-    public function __construct() {
-        $this->reset();
-    }
+	public function start($name = "start"){
+		$this->startTime = $this->getCurrentTime();
+		$this->lap($name, debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS));
+	}
 
-    /**
-     * Resets the timers, laps and summary
-     */
-    public function reset() {
-        $this->startTime = 0;
-        $this->endTime   = 0;
-        $this->pauseTime = 0;
-        $this->laps      = array();
-        $this->lapCount  = 0;
-    }
+	public function lap($name = null){
+		$this->endLap();
 
-    /**
-     * Starts the timer
-     */
-    public function start($name = "start") {
-        $this->state = self::RUNNING;
+		if(empty($backtrace)){
+			$backtrace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
+		}
 
-        # Set the start time
-        $this->startTime = $this->getCurrentTime();
+		$backtrace = $this->preparaBacktrace($backtrace);
 
-        # Create a lap with this start time
-        $this->lap( $name );
-    }
+		$this->laps[] = [
+			"name"      => ($name ? $name : $this->lapCount),
+			"start"     => $this->getCurrentTime(),
+			"called_on" => [
+				"Class/Function/Line" => "CLASS => " . $backtrace['class'] . " - FUNCTION => " . $backtrace['function'] . " - LINE => " . $backtrace['line'],
+				"File"                => $backtrace['file'],
+			],
+			"end"       => -1,
+			"total"     => -1,
+		];
 
-    /**
-     * Ends the timer
-     */
-    public function end() {
-        $this->state = self::STOPPED;
+		$this->lapCount += 1;
+	}
 
-        # Set the end time
-        $this->endTime = $this->getCurrentTime();
+	public function endLap(){
+		$lapCount = count($this->laps) - 1;
+		if(count($this->laps) > 0){
+			$this->laps[$lapCount]['end']   = $this->getCurrentTime();
+			$this->laps[$lapCount]['total'] = $this->laps[$lapCount]['end'] - $this->laps[$lapCount]['start'];
+		}
+	}
 
-        # end the last lap
-        $this->endLap();
-    }
+	private function preparaBacktrace($backtrace) {
+		return [
+			'class'    => isset($backtrace[$this->defaultBacktraceIndex['class']]['class']) ? $backtrace[$this->defaultBacktraceIndex['class']]['class'] 		: '',
+			'line'     => isset($backtrace[$this->defaultBacktraceIndex['line']]) 			? $backtrace[$this->defaultBacktraceIndex['line']]['line'] 			: '',
+			'function' => isset($backtrace[$this->defaultBacktraceIndex['function']]) 		? $backtrace[$this->defaultBacktraceIndex['function']]['function'] 	: '',
+			'file'     => isset($backtrace[$this->defaultBacktraceIndex['file']]) 			? $backtrace[$this->defaultBacktraceIndex['file']]['file'] 			: '',
+		];
+	}
 
-    /**
-     * Creates a new lap in lap array property
-     */
-    public function lap( $name = null ) {
-        # end the last lap
-        $this->endLap();
+	public function stop() {
+		$this->endTime = $this->getCurrentTime();
+		$this->endLap();
+	}
 
-        # Create new lap
-        $this->laps[] = array(
-            "name"  => ( $name ? $name : $this->lapCount ),
-            "start" => $this->getCurrentTime(),
-            "end"   => -1,
-            "total" => -1,
-        );
+	public function summary() {
+		$this->removeStartsEnds();
 
-        $this->lapCount += 1;
-    }
+		$backtrace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
+		$backtrace = $this->preparaBacktrace($backtrace);
 
-    /**
-     * Returns a summary of all timer activity so far
-     *
-     * @return array
-     */
-    public function summary() {
-        return array(
-            'running' => $this->state,
-            'start'   => $this->startTime,
-            'end'     => $this->endTime,
-            'total'   => $this->endTime - $this->startTime,
-            'paused'  => $this->totalPauseTime,
-            'laps'    => $this->laps
-        );
-    }
+		$return = [
+			'running'   => $this->state,
+			'start'     => $this->formatDate($this->startTime),
+			'end'       => $this->formatDate($this->endTime),
+			'total'     => $this->formatTime($this->endTime - $this->startTime),
+			'paused'    => $this->formatTime($this->totalPauseTime),
+			"called_on" => [
+				"Class/Function/Line" => "CLASS => " . $backtrace['class'] . " - FUNCTION => " . $backtrace['function'] . " - LINE => " . $backtrace['line'],
+				"File"                => $backtrace['file'],
+			],
+			'laps'      => $this->laps,
+		];
 
-    /**
-     * Initiates a pause in the timer
-     */
-    public function pause() {
-        $this->state = self::PAUSED;
-        $this->pauseTime = $this->getCurrentTime();
-    }
+		if (!empty($this->removeCalledOnInfo)) {
+			unset($return['called_on']);
+		}
 
-    /**
-     * Cancels the pause previously set
-     */
-    public function unPause() {
-        $this->state = self::RUNNING;
-        $this->totalPauseTime += $this->getCurrentTime() - $this->pauseTime;
-        $this->pauseTime      = 0;
-    }
+		return $return;
+	}
 
-    /**
-     * Assign end and total times to the previous lap
-     */
-    public function endLap() {
-        $lapCount = count( $this->laps ) - 1;
-        if ( count( $this->laps ) > 0 ) {
-            $this->laps[$lapCount]['end']   = $this->getCurrentTime();
-            $this->laps[$lapCount]['total'] = $this->laps[$lapCount]['end'] - $this->laps[$lapCount]['start'];
-        }
-    }
+	public function removeStartsEnds() {
+		foreach ($this->laps as $index => $lap) {
+			unset($this->laps[$index]['start']);
+			unset($this->laps[$index]['end']);
+		}
+	}
 
-    /**
-     * Returns the current time
-     *
-     * @return float
-     */
-    public function getCurrentTime() {
-        return microtime( true );
-    }
+	public function getCurrentTime() {
+		return microtime( true );
+	}
 }
 
 

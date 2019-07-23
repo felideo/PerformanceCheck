@@ -1,5 +1,5 @@
 {
-    "name": "jsanc623/phpbenchtime",
+    "name": "felideo/performance-check",
     "description": "A light benchmark timer class for PHP.",
     "keywords":[
         "benchmark",
@@ -11,15 +11,20 @@
     "license": "MIT",
     "authors": [
         {
-            "name": "Juan Sanchez",
-            "email": "juan.sanchez@juanleonardosanchez.com"
+            "name": "Felideo",
+            "email": "felideo@gmail.com"
         }
     ],
+    "require": {
+        "felideo/debug2":                    "v1.*",
+        "elipettingale/microtime-converter": "v1.*"
+    },
     "autoload": {
         "psr-4": {
-            "PHPBenchTime\\": "src/"
+            "felideo\\": "src/"
         }
-    }
+    },
+	"files": [
+		"src/Performance.php"
+	]
 }
-
-
