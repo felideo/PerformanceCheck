@@ -16,14 +16,14 @@
         }
     ],
     "require": {
-        "felideo/debug2":                    "v1.*"
+        "felideo/debug2": "v1.*"
     },
     "autoload": {
         "psr-4": {
             "felideo\\": "src/"
-        }
-    },
-	"files": [
-		"src/Performance.php"
-	]
+        },
+		"files": [
+			"src/performance.php"
+		]
+    }
 }
