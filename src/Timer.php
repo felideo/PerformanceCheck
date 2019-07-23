@@ -1,6 +1,6 @@
 <?php
 
-namespace Felideo;
+namespace Felideo\Performance;
 
 class Timer {
 	private $start_time   = 0;
@@ -20,12 +20,12 @@ class Timer {
 		$this->reset();
 	}
 
-	public static get_timer(){
+	public static function get_timer(){
 		if(isset($_SESSION['performance_test']) && is_object($_SESSION['performance_test']) && $_SESSION['performance_test'] instanceof felideo\Timer){
 			return $_SESSION['performance_test'];
 		}
 
-		$_SESSION['performance_test'] = new felideo\Timer();
+		$_SESSION['performance_test'] = new Felideo\Performance\Timer();
 
 		return $_SESSION['performance_test'];
 	}

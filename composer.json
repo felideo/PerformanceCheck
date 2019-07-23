@@ -20,7 +20,7 @@
     },
     "autoload": {
         "psr-4": {
-            "felideo\\": "src/"
+            "Felideo\\Performance\\": "src/"
         },
 		"files": [
 			"src/performance.php"
