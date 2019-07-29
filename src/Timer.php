@@ -54,13 +54,11 @@ class Timer {
 	}
 
 	public function start($name = "start"){
-		$this->start_time = $this->getCurrentTime();
+		$this->start_time = microtime(true);
 		$this->lap($name, debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS));
 	}
 
 	public function lap($name = null, $backtrace = null){
-		$this->endLap();
-
 		if(empty($backtrace)){
 			$backtrace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
 		}
@@ -69,7 +67,7 @@ class Timer {
 
 		$this->laps[] = [
 			"name"      => ($name ? $name : $this->lap_count),
-			"start"     => $this->getCurrentTime(),
+			"start"     => microtime(true),
 			"memory"    => memory_get_peak_usage(true) / 1048576 . ' Mb',
 			"called_on" => [
 				"Class/Function/Line" => "CLASS => " . $backtrace['class'] . " - FUNCTION => " . $backtrace['function'] . " - LINE => " . $backtrace['line'],
@@ -93,20 +91,17 @@ class Timer {
 
 	public function endLap(){
 		$lapCount = count($this->laps) - 1;
-		if(count($this->laps) > 0){
-			$this->laps[$lapCount]['end']   = $this->getCurrentTime();
-			$this->laps[$lapCount]['total'] = $this->formatTime($this->laps[$lapCount]['end'] - $this->laps[$lapCount]['start']);
-		}
+		$this->laps[$lapCount]['end']   = microtime(true);
+		$this->laps[$lapCount]['total'] = $this->formatTime($this->laps[$lapCount]['end'] - $this->laps[$lapCount]['start']);
 	}
 
 	public function stop() {
-		$this->end_time = $this->getCurrentTime();
-		$this->lap($name, debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS));
+		$this->end_time = microtime(true);
 		$this->endLap();
 	}
 
 	public function summary($print = false) {
-		$this->removeStartsEnds();
+		// $this->removeStartsEnds();
 
 		$return = [
 			'start'     => $this->formatDate($this->start_time),
@@ -155,10 +150,4 @@ class Timer {
 			unset($this->laps[$index]['end']);
 		}
 	}
-
-	public function getCurrentTime() {
-		return microtime(true);
-	}
 }
-
-

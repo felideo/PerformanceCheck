@@ -20,10 +20,10 @@ class MicroTime
                 / 60)
             / 60;
 
-        $this->hours = $hours;
-        $this->minutes = $minutes % 60;
-        $this->seconds = $seconds % 60;
-        $this->milliseconds = $milliseconds % 1000;
+        $this->hours        = (int) $hours;
+        $this->minutes      = (int) $minutes % 60;
+        $this->seconds      = (int) $seconds % 60;
+        $this->milliseconds = (int) $milliseconds % 1000;
     }
 
     public function toArray(){

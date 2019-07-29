@@ -9,6 +9,7 @@ function performance_start(){
 }
 
 function performance_lap($name = null){
+	$_SESSION['performance_check']->endLap();
 	$_SESSION['performance_check']->lap($name);
 }
 
