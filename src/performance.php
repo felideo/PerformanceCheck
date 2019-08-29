@@ -13,7 +13,7 @@ function performance_lap($name = null){
 	$_SESSION['performance_check']->lap($name);
 }
 
-function performance_stop($name = null){
+function performance_stop($print = true){
 	$_SESSION['performance_check']->stop();
-	$_SESSION['performance_check']->summary(true);
+	return $_SESSION['performance_check']->summary($print);
 }
