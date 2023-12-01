@@ -8,6 +8,7 @@ class Timer {
 	private $laps                  = [];
 	private $lap_count             = 0;
 	private	$time_zone             = 'America/Sao_Paulo';
+	private $xhprof                = null;
 	private	$defaultBacktraceIndex = [
 		'class'    => 1,
 		'line'     => 0,
@@ -16,15 +17,15 @@ class Timer {
 	];
 
 	private function __construct(){
-		if(\session_status() == PHP_SESSION_NONE){
-			\session_start();
+		if(session_status() == PHP_SESSION_NONE){
+			session_start();
 		}
 
 		$this->reset();
 	}
 
 	public static function get_timer(){
-		if(isset($_SESSION['performance_check']) && \is_object($_SESSION['performance_check']) && $_SESSION['performance_check'] instanceof felideo\Timer){
+		if(isset($_SESSION['performance_check']) && is_object($_SESSION['performance_check']) && $_SESSION['performance_check'] instanceof felideo\Timer){
 			return $_SESSION['performance_check'];
 		}
 
@@ -58,21 +59,21 @@ class Timer {
 	}
 
 	public function start($name = "start"){
-		$this->start_time = \microtime(true);
-		$this->lap($name, \debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS));
+		$this->start_time = microtime(true);
+		$this->lap($name, debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS));
 	}
 
 	public function lap($name = null, $backtrace = null){
 		if(empty($backtrace)){
-			$backtrace = \debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
+			$backtrace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
 		}
 
 		$backtrace = $this->preparaBacktrace($backtrace);
 
 		$this->laps[] = [
 			"name"      => ($name ? $name : $this->lap_count),
-			"start"     => \microtime(true),
-			"memory"    => \memory_get_peak_usage(true) / 1048576 . ' Mb',
+			"start"     => microtime(true),
+			"memory"    => memory_get_peak_usage(true) / 1048576 . ' Mb',
 			"called_on" => [
 				"Class/Function/Line" => "CLASS => " . $backtrace['class'] . " - FUNCTION => " . $backtrace['function'] . " - LINE => " . $backtrace['line'],
 				"File"                => $backtrace['file'],
@@ -94,13 +95,13 @@ class Timer {
 	}
 
 	public function endLap(){
-		$lapCount = \count($this->laps) - 1;
-		$this->laps[$lapCount]['end']   = \microtime(true);
+		$lapCount = count($this->laps) - 1;
+		$this->laps[$lapCount]['end']   = microtime(true);
 		$this->laps[$lapCount]['total'] = $this->formatTime($this->laps[$lapCount]['end'] - $this->laps[$lapCount]['start']);
 	}
 
 	public function stop() {
-		$this->end_time = \microtime(true);
+		$this->end_time = microtime(true);
 		$this->endLap();
 	}
 
@@ -108,11 +109,12 @@ class Timer {
 		// $this->removeStartsEnds();
 
 		$return = [
-			'start'     => $this->formatDate($this->start_time),
-			'end'       => $this->formatDate($this->end_time),
-			"memory"    => \memory_get_peak_usage(true) / 1048576 . ' Mb',
-			'total'     => $this->formatTime($this->end_time - $this->start_time),
-			'laps'      => $this->laps
+			'start'  => $this->formatDate($this->start_time),
+			'end'    => $this->formatDate($this->end_time),
+			"memory" => memory_get_peak_usage(true) / 1048576 . ' Mb',
+			'total'  => $this->formatTime($this->end_time - $this->start_time),
+			'laps'   => $this->laps,
+			'xhprof' => $this->xhprof
 		];
 
 		if(!empty($print)){
@@ -141,9 +143,9 @@ class Timer {
 		// 	return $microtime . ' microseconds';
 		// }
 
-		$hours   = \strlen($total->hours) 	== 1 ? '0' . $total->hours : $total->hours;
-		$minutes = \strlen($total->minutes)	== 1 ? '0' . $total->minutes : $total->minutes;
-		$seconds = \strlen($total->seconds)	== 1 ? '0' . $total->seconds : $total->seconds;
+		$hours   = strlen($total->hours) 	== 1 ? '0' . $total->hours : $total->hours;
+		$minutes = strlen($total->minutes)	== 1 ? '0' . $total->minutes : $total->minutes;
+		$seconds = strlen($total->seconds)	== 1 ? '0' . $total->seconds : $total->seconds;
 
 		return $hours . ':' . $minutes . ':' . $seconds . '.' . $total->milliseconds;
 	}
@@ -153,5 +155,14 @@ class Timer {
 			unset($this->laps[$index]['start']);
 			unset($this->laps[$index]['end']);
 		}
+	}
+
+	public function setXhprof($xhprof){
+		$this->xhprof = $xhprof;
+		return $this;
+	}
+
+	public function getXhprof(){
+		return $this->xhprof;
 	}
 }
