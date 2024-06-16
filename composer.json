@@ -16,7 +16,7 @@
         }
     ],
     "require": {
-        "felideo/debug2": "v1.*"
+        "felideo/debug2": "*"
     },
     "autoload": {
         "psr-4": {
